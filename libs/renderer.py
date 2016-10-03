@@ -444,9 +444,9 @@ class game:
 		boundingsize=(biggest[0]-smallest[0], biggest[1]-smallest[1])
 		scale= (self.size[0]/boundingsize[0], self.size[1]/boundingsize[1])
 
-                curs.execute(logQ("""select name, round(st_area(way)), st_asgeojson( way ), st_asgeojson( st_centroid(way) ),'polygon'  from (SELECT * FROM planet_osm_polygon where boundary = 'administrative' and name not ilike '%kreis%'  order by round(st_area(way)) desc limit 50 ) a
+                curs.execute(logQ("""select unaccent(name), round(st_area(way)), st_asgeojson( way ), st_asgeojson( st_centroid(way) ),'polygon'  from (SELECT * FROM planet_osm_polygon where boundary = 'administrative' and name not ilike '%kreis%'  order by round(st_area(way)) desc limit 50 ) a
 		UNION ALL
-		SELECT name, 0, st_asgeojson(way), '', 'line' FROM planet_osm_line WHERE highway is not null and highway in('primary','motorway_link',  'motorway')
+		SELECT unaccent(name), 0, st_asgeojson(way), '', 'line' FROM planet_osm_line WHERE highway is not null and highway in('primary','motorway_link',  'motorway')
 """))
 		regions=curs.fetchall()
 		names=dict()
