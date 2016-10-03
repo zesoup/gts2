@@ -5,6 +5,8 @@ By utilizing PostGIS and Openstreetmap, the Database allows for quick geospatial
 The games logic is based on triggers and constraints. Hence here's little the Application has to do besides rendering and forwarding commands like "accelerate".
 
 
+![alt tag](https://github.com/zesoup/gts2/blob/master/images/GTS.png)
+
 
 Currently based on Python2.7 the key requirements on the frontend are:
 
