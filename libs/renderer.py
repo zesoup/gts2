@@ -9,9 +9,12 @@ from random import random
 import sys
 import threading
 import multiprocessing
+import cairo
+
 
 import rastermap
 import time
+import datetime
 
 import cPickle
 
@@ -29,6 +32,7 @@ querylog=collections.deque(maxlen=9)
 querylog_sem=threading.Semaphore()
 querycount = 0
 def logQ(txt):
+	return txt
 	global querycount
 	querycount =querycount + 1
 	querylog_sem.acquire()
@@ -67,8 +71,14 @@ def drawRegion(q, _pos ,pixpermap,  zoom, curs, resolution=100, transparency=Fal
 				pixpermap[0]*zoom[0]*0.9) )
 					a=curs.fetchall()
 					cnt = len(a)
-					#print "%5s items"% (cnt,)
+					
 					rasterimg = pygame.Surface( pixpermap, pygame.SRCALPHA, 32)
+					pixels = pygame.surfarray.pixels2d( rasterimg ) 
+					surface_cairo = cairo.ImageSurface.create_for_data (pixels.data, cairo.FORMAT_ARGB32, pixpermap[0], pixpermap[1])
+
+					ctx = cairo.Context( surface_cairo) 
+
+
 					if not transparency:
 						rasterimg.fill((10,70,30,255))
 
@@ -94,7 +104,16 @@ def drawRegion(q, _pos ,pixpermap,  zoom, curs, resolution=100, transparency=Fal
 									print "skipping"
 									continue
 								w = float(qwidth)/zoom[0]
-								pygame.draw.polygon(rasterimg,  color, g,int(w)) #color, g )	
+								
+								ctx.set_source_rgb( color[0]/255.0, color[1]/255.0, color[2]/255.0)
+								ctx.set_line_width(int(float(w) ) ) # DAFUQ? CASTMANIA!
+								ctx.move_to( g[0][0], g[0][1] )
+								for p in g[1:]:
+									ctx.line_to( p[0], p[1] )
+								ctx.close_path()
+								if w==0:
+									ctx.fill()
+								ctx.stroke()
 						if jsonway['type']=='LineString':
 							w = float(qwidth)/zoom[0]
 							try:
@@ -118,14 +137,19 @@ def drawRegion(q, _pos ,pixpermap,  zoom, curs, resolution=100, transparency=Fal
 							if len(g) < 2:
 								print "skipping"
 								continue
-							pygame.draw.lines(rasterimg ,color,False, g ,int(float(w)) )#/zoom[0]) ) 
-		
+							ctx.set_source_rgba( color[0]/255.0, color[1]/255.0, color[2]/255.0, 1)
+							ctx.set_line_width(int(float(w) ) ) # DAFUQ? CASTMANIA!
+							ctx.move_to( g[0][0], g[0][1] )
+							for p in g[1:]:
+								ctx.line_to( p[0], p[1] )
+							ctx.stroke()
+	
 					q.put( pygame.image.tostring(rasterimg, 'RGBA') )
-					#q.put ( rasterimg.copy() )
 					return 0
 	except Exception as e:
+		print "---"
+		print "E: %s"%(e)
 		print "Workerprocess died"
-		print e
 		return 0
 
 class objectpuller( threading.Thread):
@@ -160,12 +184,13 @@ class objectpuller( threading.Thread):
 			curs = conn.cursor()
 			try:
 				#curs.execute("SELECT st_asgeojson(position),rotation FROM object WHERE name = 'jsc'")
-				curs.execute(logQ("SELECT name, st_asgeojson(position),rotation, typ, controller, hp FROM object "))
+				curs.execute(logQ("SELECT name, st_asgeojson(position),rotation, typ, controller, hp, modification FROM object "))
 
 				objects = curs.fetchall()
 				self.objectman.lock.acquire(True)	
 				for r in objects:
-					(name, p, rot, typ, controller,hp) = r
+					(name, p, rot, typ, controller,hp, modification) = r
+					print "ObjectOffseT: %s  %s" %(time.time(), modification) 
 					pos = json.loads(p)['coordinates']
 					if not name in self.objectman.objectlist or typ != self.objectman.objectlist[name].typ:
 						print ("SPAWN %s"%(name,) )
@@ -650,16 +675,16 @@ class game:
 					 self.screen, (self.size[0]/2 - 100, self.size[1]/2 + 100), (255,0, 0))
 		except:
 			print "issue rendering FPS or Street"
-		self.screen.blit( self.querybg.image, (50,600) )
-		try:
-			h = 0
-			querylog_sem.acquire(True)
-			for line in querylog:
-				h = h + 1
-				self.putText('Q: %s'%(line,),self.screen, (75,600+h*17), (0,0,0))
-			querylog_sem.release()
-		except Exception as e:
-			print e
+		#self.screen.blit( self.querybg.image, (50,600) )
+		#try:
+		#	h = 0
+		#	querylog_sem.acquire(True)
+		#	for line in querylog:
+		#		h = h + 1
+		#		self.putText('Q: %s'%(line,),self.screen, (75,600+h*17), (0,0,0))
+		#	querylog_sem.release()
+		#except Exception as e:
+		#	print e
 		self.activelogo.xpos = (self.activelogo.xpos+2)%100
 
 		for x in self.envpool:
