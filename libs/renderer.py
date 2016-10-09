@@ -43,115 +43,6 @@ def logQ(txt):
 	querylog_sem.release()
 	return txt
 
-
-def drawRegion(q, _pos ,pixpermap,  zoom, curs, resolution=100, transparency=False ):
-	try:
-					#zoom=zoom[0]
-					curs.execute("""
-				SELECT
-                                osm_id, 
-                                st_asgeojson(a.way),
-				tags,
-				zlevel,
-				color,
-				width,
-				_width,
-				key,
-				value
-                        FROM all_render a -- TABLESAMPLE BERNOULLI (%s)
-                        WHERE  st_dwithin(a.way, ST_SetSRID(ST_MakePoint(%s,%s),900913),%s) 
-				
-				--and st_area(way) < 15000000
-				--and way_area < 10000 
-                                --and boundary is null  
-                        ORDER BY zlevel asc, osm_id desc
-                                """, ( resolution, 
-				_pos[0]+pixpermap[0]*zoom[0]*0.5,
-				_pos[1]+pixpermap[1]*zoom[1]*0.5,
-				pixpermap[0]*zoom[0]*0.9) )
-					a=curs.fetchall()
-					cnt = len(a)
-					
-					rasterimg = pygame.Surface( pixpermap, pygame.SRCALPHA, 32)
-					pixels = pygame.surfarray.pixels2d( rasterimg ) 
-					surface_cairo = cairo.ImageSurface.create_for_data (pixels.data, cairo.FORMAT_ARGB32, pixpermap[0], pixpermap[1])
-
-					ctx = cairo.Context( surface_cairo) 
-
-
-					if not transparency:
-						rasterimg.fill((10,70,30,255))
-
-
- 					def recalcpos( p, offset, _zoom):
-						return ( ((p[0]-offset[0])/_zoom[0], (p[1]-offset[1])/_zoom[1]  ) )
-
-					for item in a:
-						(qid, qway, qtags, qzlevel, qcolor,qlwidth, qwidth, qkey, qvalue) =item
-						jsonway = json.loads(qway)
-						exec(qcolor)
-						if jsonway['type']=='Polygon':
-							for pt in jsonway['coordinates']:
-								g=[]
-								for grp in pt:
-									try:
-										agrp=recalcpos(grp, _pos, zoom )
-										g.append( (float(agrp[0]),float(agrp[1])))
-									except Exception as e:
-										print e
-										print "could not parse"
-								if len(g) <= 3:
-									print "skipping"
-									continue
-								w = float(qwidth)/zoom[0]
-								
-								ctx.set_source_rgb( color[0]/255.0, color[1]/255.0, color[2]/255.0)
-								ctx.set_line_width(int(float(w) ) ) # DAFUQ? CASTMANIA!
-								ctx.move_to( g[0][0], g[0][1] )
-								for p in g[1:]:
-									ctx.line_to( p[0], p[1] )
-								ctx.close_path()
-								if w==0:
-									ctx.fill()
-								ctx.stroke()
-						if jsonway['type']=='LineString':
-							w = float(qwidth)/zoom[0]
-							try:
-								if qlwidth != None:
-									qlwidth=qlwidth.replace(',','.')
-									qlwidth=qlwidth.replace('m','')
-									qlwidth=qlwidth.strip()
-									w=float(qlwidth)+qwidth
-									w=w/zoom[0]
-							except Exception as e:
-								print e
-								print "Meh, broken"
-							g=[]
-							for grp in jsonway['coordinates']:
-								try:
-									agrp=recalcpos(grp, _pos, zoom )
-									g.append( (float(agrp[0]),float(agrp[1])))
-								except Exception as e:
-									print e
-									print "could not parse"
-							if len(g) < 2:
-								print "skipping"
-								continue
-							ctx.set_source_rgba( color[0]/255.0, color[1]/255.0, color[2]/255.0, 1)
-							ctx.set_line_width(int(float(w) ) ) # DAFUQ? CASTMANIA!
-							ctx.move_to( g[0][0], g[0][1] )
-							for p in g[1:]:
-								ctx.line_to( p[0], p[1] )
-							ctx.stroke()
-	
-					q.put( pygame.image.tostring(rasterimg, 'RGBA') )
-					return 0
-	except Exception as e:
-		print "---"
-		print "E: %s"%(e)
-		print "Workerprocess died"
-		return 0
-
 class objectpuller( threading.Thread):
         def __init__(self,centerobject, objectman, username):
                 threading.Thread.__init__(self)
@@ -161,17 +52,10 @@ class objectpuller( threading.Thread):
 		conn = db.pool.getconn()
 		curs = conn.cursor()
 		self.hold=True
-		#try:
-		#	curs.execute("SELECT st_asgeojson(position) FROM object WHERE name = 'jsc'")
-		#	pos = json.loads(curs.fetchone()[0])['coordinates']
-		#except:
-		#	print "could not yet set pos. init 0.0"
 		pos=(0,0)
 		print pos
-		#self.objectman.objectlist['jsc'] = drawableobject('jsc', pos )
 		curs.close()
 		db.pool.putconn( conn )
-		#self.objectman.objectlist['jsc'].SetSprite( Sprite('images/car3.png', (30,20) ))
 	def run(self):
 		global panic
 		age = 0
@@ -184,13 +68,13 @@ class objectpuller( threading.Thread):
 			curs = conn.cursor()
 			try:
 				#curs.execute("SELECT st_asgeojson(position),rotation FROM object WHERE name = 'jsc'")
-				curs.execute(logQ("SELECT name, st_asgeojson(position),rotation, typ, controller, hp, modification FROM object "))
+				curs.execute(logQ("SELECT name, st_asgeojson(position),rotation, typ, controller, hp, modification FROM object WHERE typ != 'track' "))
 
 				objects = curs.fetchall()
 				self.objectman.lock.acquire(True)	
 				for r in objects:
 					(name, p, rot, typ, controller,hp, modification) = r
-					print "ObjectOffseT: %s  %s" %(time.time(), modification) 
+					#print "ObjectOffseT: %s " %(time.time()-time.mktime( modification.timetuple() ) ) 
 					pos = json.loads(p)['coordinates']
 					if not name in self.objectman.objectlist or typ != self.objectman.objectlist[name].typ:
 						print ("SPAWN %s"%(name,) )
@@ -304,32 +188,16 @@ class environmenter(threading.Thread):
 					if d != None:
 						#print len(data)
 						x, y, _zoom, data = d
-						dbimg = pygame.image.fromstring( data.decode('hex'), pixpermap, 'RGBA' )
+						#dbimg = pygame.image.fromstring( data.decode('hex'), pixpermap, 'RGBA' )
+						dbimg = pygame.image.fromstring( data.decode('hex') , pixpermap, 'RGBA' )
 						rasterimg = pygame.Surface( pixpermap, pygame.SRCALPHA, 32)
 						rasterimg.blit( dbimg, (0,0) ) ## THIS STEP IS IMPORTANT. BUT I DO NOT KNOW WHY
 						r= rastermap.raster(rasterimg,_pos)
 						self.rasterpool.putraster(r)
+						self.rasterpool._inflightqueue.remove(_pos)
 					else:
-						q=multiprocessing.Queue()
-						p=multiprocessing.Process(target=drawRegion, args=(q, _pos , pixpermap,  (zoom,zoom), curs, 100 ))
-						p.start()
-						r= q.get()
-						p.join()
-						rasterimg=pygame.image.fromstring( r , pixpermap, 'RGBA')
-						#rasterimg = r
-						#rasterimg = drawRegion( _pos , pixpermap,  (zoom,zoom), curs, 100 )
-					if d == None:
-						a=cPickle.dumps( rasterimg, -1 )
-						try:
-							curs.execute(logQ("INSERT INTO frontendcache(x,y,zoom,data) VALUES (%s,%s,%s,%s) on conflict do nothing;"), 
-								(	 _pos[0], _pos[1], zoom,
-									 pygame.image.tostring(rasterimg, 'RGBA').encode('hex') ,)
-									 )
-							conn.commit()
-							self.rasterpool._inflightqueue.remove(_pos)
-						except Exception as e:
-							print e
-							pass
+						curs.execute("SELECT pytest( %s, %s, %s, %s, %s, %s)",(_pos[0], _pos[1], pixpermap[0]*1., pixpermap[1]*1., zoom*1., zoom*1.  ) )
+						self.rasterpool._inflightqueue.remove(_pos)
  					#r = rastermap.raster(rasterimg, _pos)	
 					#self.rasterpool.putraster(r)	
 					conn.commit()
