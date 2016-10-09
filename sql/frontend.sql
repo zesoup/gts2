@@ -1,11 +1,23 @@
-drop table frontendcache;
+--drop table frontendcache;
 
 CREATE TABLE frontendcache (
     x numeric NOT NULL,
     y numeric NOT NULL,
     zoom numeric NOT NULL,
+    zlevel smallint not null default 0,
     data text
 );
+
+
+CREATE TABLE frontendcache_tracks (
+    x numeric NOT NULL,
+    y numeric NOT NULL,
+    zoom numeric NOT NULL,
+    trackmax bigint NOT NULL,
+    data text
+);
+
+
 
 
 ALTER TABLE ONLY frontendcache
@@ -17,7 +29,7 @@ CREATE TABLE frontendimages(
 );
 
 
-DROP   TABLE renderdata CASCADE;
+--DROP   TABLE renderdata CASCADE;
 CREATE TABLE renderdata(
 	id serial,	
 
@@ -47,7 +59,7 @@ COPY renderdata (id, key, value, type, zlevel, color, _width) FROM stdin;
 9	amenity	place_of_worship	polygon	-12	color=(70+qid%55 ,70+qid%55 ,70+qid%55)	0
 9	amenity	public_building	polygon	-12	color=(70+qid%55 ,70+qid%55 ,70+qid%55)	0
 11	building	any	polygon	99	color=(0 ,0 ,0)	4
-11	building	any	polygon	100	color=(130+qid%55 ,130+qid%55 ,130+qid%55)	0
+11	building	any	polygon	100	color=(130+qid%55 ,110+qid%55 ,110+qid%55)	0
 12	highway	primary	line	5	color=(0 ,0 ,0)	30
 13	highway	primary	line	6	color=(130+qid%55 ,130+qid%55 ,130+qid%55)	28
 14	highway	primary	line	7	color=(255 ,255 ,255)	1

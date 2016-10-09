@@ -1,18 +1,8 @@
-CREATE TABLE frontendcache (
-    x numeric NOT NULL,
-    y numeric NOT NULL,
-    zoom numeric NOT NULL,
-    data text
-);
 
 
 ALTER TABLE ONLY frontendcache
     ADD CONSTRAINT pkey PRIMARY KEY (x, y, zoom);
 
-CREATE TABLE frontendimages(
-	name text primary key,
-	data bytea
-);
 
  
 CREATE  TABLE object(
@@ -33,6 +23,15 @@ CREATE  TABLE object(
         --z_level int not null default 0, --not in use right now
         --additional jsonb -- not in use right now
 ) with (fillfactor=10);
+
+CREATE TABLE object_static(
+	position	geometry not null,
+	rotation	real not null default 0,
+	epoch		bigserial,
+	typ		text,
+	creation	timestamp with time zone default now()
+);
+
 CREATE INDEX ON object(position);
 CREATE INDEX ON object(controller) WHERE controller is not null;
 CREATE INDEX ON object(acceleration);

@@ -196,7 +196,7 @@ class environmenter(threading.Thread):
 						self.rasterpool.putraster(r)
 						self.rasterpool._inflightqueue.remove(_pos)
 					else:
-						curs.execute("SELECT pytest( %s, %s, %s, %s, %s, %s)",(_pos[0], _pos[1], pixpermap[0]*1., pixpermap[1]*1., zoom*1., zoom*1.  ) )
+						curs.execute("SELECT renderbackend( %s, %s, %s, %s, %s, %s)",(_pos[0], _pos[1], pixpermap[0]*1., pixpermap[1]*1., zoom*1., zoom*1.  ) )
 						self.rasterpool._inflightqueue.remove(_pos)
  					#r = rastermap.raster(rasterimg, _pos)	
 					#self.rasterpool.putraster(r)	
@@ -495,8 +495,6 @@ class game:
 				y = y+ imgsize[1]		
 			x = x+imgsize[0]
 
-		#for image in self.renderimages:
-		#	self.screen.blit( image, (0,0))
 
 		if zoom==20:
 			self.CACHEMODE=False
@@ -543,16 +541,6 @@ class game:
 					 self.screen, (self.size[0]/2 - 100, self.size[1]/2 + 100), (255,0, 0))
 		except:
 			print "issue rendering FPS or Street"
-		#self.screen.blit( self.querybg.image, (50,600) )
-		#try:
-		#	h = 0
-		#	querylog_sem.acquire(True)
-		#	for line in querylog:
-		#		h = h + 1
-		#		self.putText('Q: %s'%(line,),self.screen, (75,600+h*17), (0,0,0))
-		#	querylog_sem.release()
-		#except Exception as e:
-		#	print e
 		self.activelogo.xpos = (self.activelogo.xpos+2)%100
 
 		for x in self.envpool:
@@ -562,10 +550,9 @@ class game:
 				a =  environmenter(self.rastermap)
 				self.envpool.append( a )
 				a.start()
-		if time.time() - self.lastactivity > 15:
-			#print "inactive"
-			#self.screen.fill( (0,128,0,55) )
-			self.screen.blit( self.GTS_OVERVIEW.image, (0,0) )
+		#if time.time() - self.lastactivity > 15:
+		#	self.screen.blit( self.GTS_OVERVIEW.image, (0,0) )
+
 		self.screen.blit( self.forkme.image, (self.size[0]-self.forkme.image.get_width(),0) )
 
 		self.objectpuller.hold=False
