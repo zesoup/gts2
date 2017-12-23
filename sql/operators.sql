@@ -30,7 +30,7 @@ deltay = deltay * (b.weight / a.weight);
 			+deltax*0.02,
 		(j_a->'coordinates'->>1)::double precision
 			+deltay*0.02)
-		, 900913);
+		, 3857 );
 RAISE LOG '% vs %', j_a, st_asgeojson(output.position);
  return output;
 END $$ language plpgSQL;
@@ -39,5 +39,5 @@ END $$ language plpgSQL;
 CREATE OPERATOR + ( procedure = pos_add_inert, leftarg=geometry, rightarg=_inertia);
 CREATE OPERATOR * ( procedure = inert_mult_time, leftarg=_inertia, rightarg=double precision);
 
-SELECT st_asgeojson(ST_SetSRID(ST_MakePoint(12, 13),900913) + (1,1)::_inertia * extract(epoch from age('2016-03-09 10:34:19.350156','2016-03-09 10:34:18.350156') ));
+SELECT st_asgeojson(ST_SetSRID(ST_MakePoint(12, 13),3857) + (1,1)::_inertia * extract(epoch from age('2016-03-09 10:34:19.350156','2016-03-09 10:34:18.350156') ));
 

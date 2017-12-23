@@ -57,7 +57,12 @@ if (args.forcespawn or cursor.rowcount < 1 ):
 	time.sleep(3)
 	#print "You chose %s"% (newspawnlocation)
 
-cursor.execute("SELECT o.name, p.name, st_asgeojson(o.position) from object o,  planet_osm_polygon p WHERE o.controller=%s AND  st_dwithin(p.way, o.position, 1) and boundary='administrative' ORDER by st_area(p.way) asc limit 1;", (args.username,))
+cursor.execute("""SELECT o.name, p.name, st_asgeojson(o.position) 
+        from object o,  planet_osm_polygon p 
+        WHERE o.controller=%s 
+           -- AND  st_dwithin(p.way, o.position, 1) 
+            and boundary='administrative' 
+        ORDER by st_area(p.way) asc limit 1;""", (args.username,))
 user = cursor.fetchone()
 try:
 	game.userpos = json.loads(user[2])['coordinates']

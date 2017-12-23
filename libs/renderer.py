@@ -194,7 +194,7 @@ class environmenter(threading.Thread):
 						rasterimg.blit( dbimg, (0,0) ) ## THIS STEP IS IMPORTANT. BUT I DO NOT KNOW WHY
 						r= rastermap.raster(rasterimg,_pos)
 						self.rasterpool.putraster(r)
-						self.rasterpool._inflightqueue.remove(_pos)
+						#self.rasterpool._inflightqueue.remove(_pos)
 					else:
 						curs.execute("SELECT renderbackend( %s, %s, %s, %s, %s, %s)",(_pos[0], _pos[1], pixpermap[0]*1., pixpermap[1]*1., zoom*1., zoom*1.  ) )
 						self.rasterpool._inflightqueue.remove(_pos)
@@ -208,6 +208,8 @@ class environmenter(threading.Thread):
 				print "vvvvv"
 				print e
 				print "Environmenter ERROR"
+                                import traceback
+                                traceback.print_exc()
 				self.rasterpool.releaseRequest( currentRequest )
 				conn.commit()
 				curs.close()

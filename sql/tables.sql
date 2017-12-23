@@ -1,12 +1,12 @@
 
 
-ALTER TABLE ONLY frontendcache
-    ADD CONSTRAINT pkey PRIMARY KEY (x, y, zoom);
+--ALTER TABLE ONLY frontendcache
+--    ADD CONSTRAINT pkey PRIMARY KEY (x, y, zoom);
 
 
  
 CREATE  TABLE object(
-        position        geometry not null,
+        position        geometry(Geometry, 3857) not null,
         inertia         _inertia not null default (0,0),
         acceleration    real not null default 0,
         rotation        real not null default 0,

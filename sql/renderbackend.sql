@@ -10,7 +10,7 @@ CREATE OR REPLACE FUNCTION renderbackend_tracks( _posx numeric, _posy numeric , 
                                         import traceback
 
 
-                                        plan = plpy.prepare("SELECT osm_id, st_asgeojson(a.way) js,tags,zlevel,color, width  wdth,_width wdthh,key, value, z_order  FROM all_render a  WHERE  st_dwithin(a.way, ST_SetSRID(ST_MakePoint($1,$2),900913),$3) ORDER BY zlevel asc, osm_id desc", ["numeric","numeric","numeric"] )
+                                        plan = plpy.prepare("SELECT osm_id, st_asgeojson(a.way) js,tags,zlevel,color, width  wdth,_width wdthh,key, value, z_order  FROM all_render a  WHERE  st_dwithin(a.way, ST_SetSRID(ST_MakePoint($1,$2),3857),$3) ORDER BY zlevel asc, osm_id desc", ["numeric","numeric","numeric"] )
                                         cursor = plpy.cursor( plan, [float(_posx)+(float(pixpermapx)*zoomx*0.5), float(_posy)+(float(pixpermapy)*zoomy*0.5), float(pixpermapx)*float(zoomx)*1.] )
                                         
                                         rasterimg = pygame.Surface( (pixpermapx, pixpermapy), pygame.SRCALPHA, 32)
@@ -129,7 +129,7 @@ CREATE OR REPLACE FUNCTION renderbackend( _posx numeric, _posy numeric , pixperm
                                         import traceback
 
 
-                                        plan = plpy.prepare("SELECT osm_id, st_asgeojson(a.way) js,tags,zlevel,color, width  wdth,_width wdthh,key, value, z_order  FROM all_render a  WHERE  st_dwithin(a.way, ST_SetSRID(ST_MakePoint($1,$2),900913),$3) ORDER BY zlevel asc, osm_id desc", ["numeric","numeric","numeric"] )
+                                        plan = plpy.prepare("SELECT osm_id, st_asgeojson(a.way) js,tags,zlevel,color, width  wdth,_width wdthh,key, value, z_order  FROM all_render a  WHERE  st_dwithin(a.way, ST_SetSRID(ST_MakePoint($1,$2),3857),$3) ORDER BY zlevel asc, osm_id desc", ["numeric","numeric","numeric"] )
                                         cursor = plpy.cursor( plan, [float(_posx)+(float(pixpermapx)*zoomx*0.5), float(_posy)+(float(pixpermapy)*zoomy*0.5), float(pixpermapx)*float(zoomx)*1.] )
                                         
                                         rasterimg = pygame.Surface( (pixpermapx, pixpermapy), pygame.SRCALPHA, 32)

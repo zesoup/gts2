@@ -1,5 +1,5 @@
 CREATE OR REPLACE FUNCTION floats_to_geo(x double precision, y double precision) RETURNS geometry AS $$
-SELECT ST_SetSRID(ST_MakePoint(x, x),900913)
+SELECT ST_SetSRID(ST_MakePoint(x, x),3857)
 $$ language SQL; 
 
 SELECT floats_to_geo (12, 13);
@@ -145,7 +145,7 @@ CREATE OR REPLACE FUNCTION spawn(name text, typ entity default 'car') returns bo
 BEGIN
      BEGIN
 		INSERT INTO object(name, typ, position, rotation)
-      			VALUES (name,typ,ST_SetSRID(ST_MakePoint(1485334+random()*40,6892139.01+random()*40),900913),0 );
+      			VALUES (name,typ,ST_SetSRID(ST_MakePoint(1485334+random()*40,6892139.01+random()*40),3857),0 );
              -- INSERT INTO event (typ, referee, payload)
              --           VALUES ('message',name, name||' joined!');	
      exception when unique_violation THEN return true;END;
@@ -158,7 +158,7 @@ CREATE OR REPLACE FUNCTION guided_spawn(name text, positionx numeric, positiony 
 BEGIN
      BEGIN
 		INSERT INTO object(name, typ, position, rotation, controller)
-      			VALUES (name,'car',ST_SetSRID(ST_MakePoint(positionx, positiony),900913),0, name );
+      			VALUES (name,'car',ST_SetSRID(ST_MakePoint(positionx, positiony),3857),0, name );
              -- INSERT INTO event (typ, referee, payload)
              --           VALUES ('message',name, name||' joined!');	
      exception when unique_violation THEN return true;END;
@@ -169,7 +169,7 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION reset(n text) returns void AS $$
 	UPDATE object 
-		SET position = ST_SetSRID(ST_MakePoint(716422.9+random()*80,6656813.01+random()*80),900913), hp = 100, typ = 'car'
+		SET position = ST_SetSRID(ST_MakePoint(716422.9+random()*80,6656813.01+random()*80),3857), hp = 100, typ = 'car'
 	WHERE name = n;
 $$ LANGUAGE SQL;
 
