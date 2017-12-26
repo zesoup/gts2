@@ -257,6 +257,10 @@ class game:
 		self.forkme = Sprite('images/forkme.png',(298,298), True)
 		self.GTS_OVERVIEW = Sprite('images/GTS_OVERVIEW.png',self.size, False)
 
+                self._overviewmap = None
+                self._overviewboundslower=None
+                self._overviewboundsupper=None
+                self._overviewsize=None
 
 		self.lastactivity = time.time()
 
@@ -345,6 +349,72 @@ class game:
 		conn.commit()
 		db.pool.putconn( conn )
 
+	def generateMap(self):
+    		self.rastermap.setZoom(5)
+                mapsize=(200,200)
+                self._overviewsize=mapsize
+		self._overviewmap = pygame.Surface(mapsize, pygame.SRCALPHA, 32 )
+		self._overviewmap.fill((0,20,0,255))
+		conn=db.pool.getconn()
+		curs = conn.cursor()
+		self.initBoundingBox()
+		smallest = self.bblower
+		biggest = self.bbupper
+                self._overviewboundslower=smallest
+                self._overviewboundsupper=biggest
+
+		boundingsize=(biggest[0]-smallest[0], biggest[1]-smallest[1])
+		scale= (mapsize[0]/boundingsize[0], mapsize[1]/boundingsize[1])
+
+                curs.execute(logQ("""select unaccent(name), round(st_area(way)), st_asgeojson( way ), st_asgeojson( st_centroid(way) ),'polygon'  from (SELECT * FROM planet_osm_polygon where boundary = 'administrative' and name not ilike '%kreis%'  order by round(st_area(way)) desc limit 50 ) a
+		UNION ALL
+		SELECT unaccent(name), 0, st_asgeojson(way), '', 'line' FROM planet_osm_line WHERE highway is not null and highway in('primary','motorway_link',  'motorway')
+"""))
+		regions=curs.fetchall()
+		names=dict()
+		for region in regions:
+			print "Worked on %s" %region[0]
+			pts=[]
+			typ = region[4]
+			#print typ
+			coords= json.loads(region[2])['coordinates']
+			if typ != 'polygon':
+				#print "NO POLY"
+				for pt in coords:
+					pts.append( ( (pt[0]-smallest[0])*scale[0],(pt[1]-smallest[1])*scale[1] ))
+				pygame.draw.polygon(self._overviewmap , (0,0,0), pts,3)
+				pygame.draw.polygon(self._overviewmap , (200,200,0), pts,2)
+
+				continue
+			for x in coords[0]:
+				pts.append( ((x[0]-smallest[0])*scale[0],(x[1]-smallest[1])*scale[1]))
+			center = json.loads( region[3])['coordinates']
+			center = ((center[0]-smallest[0])*scale[0],(center[1]-smallest[1])*scale[1])
+			pygame.draw.polygon(self._overviewmap , (20+random()*50,20+random()*50,20+random()*50), pts)
+			pygame.draw.polygon(self._overviewmap , (200,200,200), pts,1)
+			#self.putText(region[0], self._map, center)
+			names[region[0]]= center
+	
+		#for cityname in names:
+		#	self.putText( cityname, self._overviewmap, names[cityname] )  
+		#randompos = ( 
+                #         smallest[0]+(boundingsize[0]*0.25)+random()*0.5*boundingsize[0],
+                #         smallest[1]+(boundingsize[1]*0.25)+random()*0.5*boundingsize[1])
+		#crosspos = self.normalize( randompos, smallest, scale)
+		#pygame.draw.lines(self._overviewmap, (255,0,0), True,[(crosspos[0]-7, crosspos[1]-7),(crosspos[0]+7, crosspos[1]-7), (crosspos[0]+7, crosspos[1]+7),(crosspos[0]-7, crosspos[1]+7) ] , 2)
+		#self.putText( "you", self._map, crosspos, (0,0,255))	
+		#self.screen.blit( self._map, (0,0))
+		#curs.execute(logQ("DELETE FROM object WHERE controller = %s"), (name , ) )	
+		#curs.execute(logQ("SELECT guided_spawn(%s, %s, %s)"), (name, randompos[0], randompos[1]) )
+		conn.commit()
+		curs.close()
+		db.pool.putconn(conn)
+		#pygame.display.flip()
+		#time.sleep(20)
+		#self.prep()
+		return 1
+
+
 	def spawnselector(self, name):
 		self.rastermap.setZoom(5)
 		self._map = pygame.Surface(self.size, pygame.SRCALPHA, 32 )
@@ -404,6 +474,7 @@ class game:
 		#time.sleep(20)
 		#self.prep()
 		return 1
+
 	def getKeys(self):
 		def singlepress():
 			time.sleep (0.1)
@@ -587,11 +658,35 @@ class game:
 				a =  environmenter(self.rastermap)
 				self.envpool.append( a )
 				a.start()
-		if time.time() - self.lastactivity > 20:
-			self.screen.blit( self.GTS_OVERVIEW.image, (0,0) )
+		#if time.time() - self.lastactivity > 20:
+		#	self.screen.blit( self.GTS_OVERVIEW.image, (0,0) )
+                try:
+                    if self._overviewmap == None:
+                        self.generateMap()
+                    self.screen.blit( self._overviewmap,(10,10) )
+                    nx = self.userpos[0] - self._overviewboundslower[0]
+                    ny = self.userpos[1] - self._overviewboundslower[1]
+
+
+                    facx = self._overviewboundsupper[0] - self._overviewboundslower[0]
+                    facy = self._overviewboundsupper[1] - self._overviewboundslower[1]
+
+                    nx = 10+(nx / facx)*200.
+                    ny = 10+(ny / facy)*200.
+
+
+                    crosspos=( nx, ny)
+                    #print(crosspos)
+		    pygame.draw.lines( self.screen, (255,0,0),
+                                True,[(crosspos[0]-5, crosspos[1]-5),(crosspos[0]+5, crosspos[1]-5), (crosspos[0]+5, crosspos[1]+5),(crosspos[0]-5, crosspos[1]+5) ] , 2)
+	
+                except Exception as e:
+                    print("Could not draw map")
+                    print(e)
                 try:
                     offset=0
                     for element in querylog:
+                        continue
                         offset+=15
 		        self.putText('%s'% ( element ),
 		    	    self.screen, (10,790-offset), (255,255, 255))
