@@ -37,13 +37,15 @@ CREATE INDEX ON object(controller) WHERE controller is not null;
 CREATE INDEX ON object(acceleration);
 CREATE INDEX on object(typ) where typ != 'track';
 
-
+CREATE TABLE homebase(
+	controller text primary key,
+	position geometry(point, 3857 )
+)
 
 
 CREATE  TABLE checkpoints_players( player_name text, cp_name text references object(name),
        starttime timestamp with time zone default now()   );
 CREATE  TABLE object_hist( like  object, insertstamp timestamp with time zone default now());                                                               
-
 
 CREATE  TABLE event(
  id bigserial primary key,

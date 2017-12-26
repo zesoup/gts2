@@ -28,11 +28,11 @@ import collections
 global panic
 panic = False
 
-querylog=collections.deque(maxlen=9)
+querylog=collections.deque(maxlen=20)
 querylog_sem=threading.Semaphore()
 querycount = 0
 def logQ(txt):
-	return txt
+	#return txt
 	global querycount
 	querycount =querycount + 1
 	querylog_sem.acquire()
@@ -137,8 +137,9 @@ class ticker( threading.Thread ):
 			time.sleep(0.018)
 			conn = db.pool.getconn()
 			cursor = conn.cursor()
-			logQ("SELECT tick(%s))")##Still havent migrated the tick to a function.. Lets pretend for demonstrational purposes
-			cursor.execute("""UPDATE object o SET 
+                        try:
+			    logQ("SELECT tick(%s))")##Still havent migrated the tick to a function.. Lets pretend for demonstrational purposes
+			    cursor.execute("""UPDATE object o SET 
                inertia=
                 (       ((o.inertia).x/10.0)*9+((o.inertia).x-cos(radians(rotation))*acceleration*0.4/weight)/10.0,
                         ((o.inertia).y/10.0)*9+((o.inertia).y+sin(radians(rotation))*acceleration*0.4/weight)/10.0  ),
@@ -149,8 +150,13 @@ class ticker( threading.Thread ):
                         AND typ in ('pedestrian','car', 'bullet')
                         AND ( age(now(),modification)> interval '10 milliseconds')
                  ;""", )
-			cursor.close()
-			conn.commit()
+                        except:
+                            pass
+                        try:
+			    cursor.close()
+			    conn.commit()
+                        except:
+                            pass
 			db.pool.putconn(conn)
 	
 
@@ -164,11 +170,15 @@ class environmenter(threading.Thread):
 		global panic
 		while not panic:
 			currentRequest = None
-			try:
+			conn=db.pool.getconn()
+			conn.set_session( autocommit = True )	
+                        #print("Environmenter pulled connection")
+                        try:
 				time.sleep(0.01)
 				if not self.rasterpool._requestqueue:
 					time.sleep(.05)
 					self.rasterpool.cleanup()
+                                        raise Exception("Nothing to do..")
 					continue
 				#print len(self.rasterpool._requestqueue)
 				if 1:
@@ -177,9 +187,10 @@ class environmenter(threading.Thread):
 					_pos=self.rasterpool.getRequest(self)
 					currentRequest = _pos
 					if _pos == None:
+                                                raise Exception ("Nothing to do")
 						continue
-					conn=db.pool.getconn()
-					conn.set_session( autocommit = True )
+					#conn=db.pool.getconn()
+					#conn.set_session( autocommit = True )
 					curs = conn.cursor()
 					curs.execute(logQ("SELECT x, y, zoom, data FROM frontendcache WHERE x = %s and y = %s and zoom=%s"),
 							(_pos[0], _pos[1], zoom)
@@ -196,25 +207,32 @@ class environmenter(threading.Thread):
 						self.rasterpool.putraster(r)
 						#self.rasterpool._inflightqueue.remove(_pos)
 					else:
-						curs.execute("SELECT renderbackend( %s, %s, %s, %s, %s, %s)",(_pos[0], _pos[1], pixpermap[0]*1., pixpermap[1]*1., zoom*1., zoom*1.  ) )
+						curs.execute(logQ("SELECT renderbackend( %s, %s, %s, %s, %s, %s)"),(_pos[0], _pos[1], int(pixpermap[0]*1) , int(pixpermap[1]*1) , zoom*1., zoom*1.  ) )
 						self.rasterpool._inflightqueue.remove(_pos)
  					#r = rastermap.raster(rasterimg, _pos)	
 					#self.rasterpool.putraster(r)	
-					conn.commit()
-					curs.close()
-					db.pool.putconn( conn )
-					#return;
+				#conn.commit()
+				#curs.close()
+				#db.pool.putconn( conn )
+				#return;
 			except Exception as e:
-				print "vvvvv"
-				print e
-				print "Environmenter ERROR"
-                                import traceback
-                                traceback.print_exc()
-				self.rasterpool.releaseRequest( currentRequest )
-				conn.commit()
-				curs.close()
-				db.pool.putconn(conn)
-				time.sleep(0.02)
+				#print "vvvvv"
+				#print e
+				#print "Environmenter ERROR"
+                                #import traceback
+                                #traceback.print_exc()
+				#self.rasterpool.releaseRequest( currentRequest )
+                                #time.sleep(0.02)
+                                pass
+                        #print("Environmenter gave connection")
+                 	self.rasterpool.releaseRequest( currentRequest )
+                        try:
+                            conn.commit()
+			    curs.close()
+                        except:
+                            pass
+			db.pool.putconn(conn)
+			time.sleep(0.02)
 
 class game:
 	def __init__(self, username,  size=(1200,800)):
@@ -232,7 +250,7 @@ class game:
 		self.userpos = None
 		self.username = username
 		self.CACHEMODE = False
-		self.font = pygame.font.Font("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 20)
+		self.font = pygame.font.Font("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 12)
 
 
 		self.querybg = Sprite('images/querybg.png',(800,200), True)	
@@ -370,12 +388,14 @@ class game:
 	
 		for cityname in names:
 			self.putText( cityname, self._map, names[cityname] )  
-		randompos = (smallest[0]+(boundingsize[0]*0.25)+random()*0.5*boundingsize[0],smallest[1]+(boundingsize[0]*0.25)+random()*0.5*boundingsize[1])
+		randompos = ( 
+                         smallest[0]+(boundingsize[0]*0.25)+random()*0.5*boundingsize[0],
+                         smallest[1]+(boundingsize[1]*0.25)+random()*0.5*boundingsize[1])
 		crosspos = self.normalize( randompos, smallest, scale)
 		pygame.draw.lines(self._map, (255,0,0), True,[(crosspos[0]-7, crosspos[1]-7),(crosspos[0]+7, crosspos[1]-7), (crosspos[0]+7, crosspos[1]+7),(crosspos[0]-7, crosspos[1]+7) ] , 2)
 		self.putText( "you", self._map, crosspos, (0,0,255))	
 		self.screen.blit( self._map, (0,0))
-
+		curs.execute(logQ("DELETE FROM object WHERE controller = %s"), (name , ) )	
 		curs.execute(logQ("SELECT guided_spawn(%s, %s, %s)"), (name, randompos[0], randompos[1]) )
 		conn.commit()
 		curs.close()
@@ -405,12 +425,23 @@ class game:
 					singlepress()
 				if pygame.key.get_pressed()[pygame.K_r]:
 					conn.commit()
-					curs.execute(" TRUNCATE OBJECT cascade ;")
-					curs.execute(" SELECT SPAWN(%s, 'pedestrian');", (self.username,) )
+					#curs.execute(" DELETE FROM  OBJECT WHERE controller is null;")
+					curs.execute( logQ(" WITH del AS ( DELETE FROM OBJECT RETURNING * ) SELECT SPAWN(del.controller, 'pedestrian') FROM del WHERE controller is not null;") )
+					#curs.execute(" SELECT SPAWN(object.controller, 'pedestrian') FROM object WHERE controller is not null;;", (self.username,) )
+					curs.execute( logQ(" UPDATE OBJECT SET CONTROLLER = NAME WHERE NAME = %s;"), (self.username,) )
+					curs.execute( logQ(" SELECT spawn('democar'||id) FROM generate_series(1,5) id;"))
+					conn.commit()
+				if pygame.key.get_pressed()[pygame.K_t]:
+					conn.commit()
+					#curs.execute(" DELETE FROM  OBJECT WHERE controller is null;")
+					curs.execute(" WITH del AS ( DELETE FROM OBJECT RETURNING * ) SELECT SPAWN(del.controller, 'pedestrian') FROM del WHERE controller is not null;" )
+					#curs.execute(" SELECT SPAWN(object.controller, 'pedestrian') FROM object WHERE controller is not null;;", (self.username,) )
 					curs.execute(" UPDATE OBJECT SET CONTROLLER = NAME WHERE NAME = %s;", (self.username,) )
 					curs.execute(" SELECT spawn('democar'||id) FROM generate_series(1,5) id;")
 					conn.commit()
-				if pygame.key.get_pressed()[pygame.K_p]:
+
+
+                                if pygame.key.get_pressed()[pygame.K_p]:
 					self.CACHEMODE=True			
 					self.rastermap.setZoom(0.25)
 				if pygame.key.get_pressed()[pygame.K_x]:
@@ -445,6 +476,10 @@ class game:
 
 		except Exception as e:
 			print e
+			curs.close()
+			conn.commit()
+			db.pool.putconn(conn)
+
 
 	def LoadToScreen(self):
 		for x in range(0,len(self.rastermap._requestqueue)):
@@ -552,8 +587,17 @@ class game:
 				a =  environmenter(self.rastermap)
 				self.envpool.append( a )
 				a.start()
-		#if time.time() - self.lastactivity > 15:
-		#	self.screen.blit( self.GTS_OVERVIEW.image, (0,0) )
+		if time.time() - self.lastactivity > 20:
+			self.screen.blit( self.GTS_OVERVIEW.image, (0,0) )
+                try:
+                    offset=0
+                    for element in querylog:
+                        offset+=15
+		        self.putText('%s'% ( element ),
+		    	    self.screen, (10,790-offset), (255,255, 255))
+                except Exception as e:
+                    print(e)
+                    pass
 
 		self.screen.blit( self.forkme.image, (self.size[0]-self.forkme.image.get_width(),0) )
 
