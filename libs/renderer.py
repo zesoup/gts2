@@ -499,7 +499,7 @@ class game:
 					#curs.execute(" DELETE FROM  OBJECT WHERE controller is null;")
 					curs.execute( logQ(" WITH del AS ( DELETE FROM OBJECT RETURNING * ) SELECT SPAWN(del.controller, 'pedestrian') FROM del WHERE controller is not null;") )
 					#curs.execute(" SELECT SPAWN(object.controller, 'pedestrian') FROM object WHERE controller is not null;;", (self.username,) )
-					curs.execute( logQ(" UPDATE OBJECT SET CONTROLLER = NAME WHERE NAME = %s;"), (self.username,) )
+					curs.execute( logQ(" UPDATE OBJECT SET CONTROLLER = NAME "), (self.username,) )
 					curs.execute( logQ(" SELECT spawn('democar'||id) FROM generate_series(1,5) id;"))
 					conn.commit()
 				if pygame.key.get_pressed()[pygame.K_t]:
@@ -686,7 +686,7 @@ class game:
                 try:
                     offset=0
                     for element in querylog:
-                        continue
+                        #continue
                         offset+=15
 		        self.putText('%s'% ( element ),
 		    	    self.screen, (10,790-offset), (255,255, 255))

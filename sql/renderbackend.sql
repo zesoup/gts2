@@ -1,3 +1,5 @@
+set search_path to rc;
+truncate rc.frontendcache;
 
 CREATE OR REPLACE FUNCTION renderbackend_tracks( _posx numeric, _posy numeric , pixpermapx numeric, pixpermapy numeric,  zoomx float, zoomy float, transparency bool default False )
 	RETURNS void
@@ -219,9 +221,15 @@ CREATE OR REPLACE FUNCTION renderbackend( _posx numeric, _posy numeric , pixperm
                                                         ctx.set_source_rgb( float(color[0])/255.0, float(color[1])/255.0, float(color[2])/255.0)
                                                         ctx.set_line_width(int(float(w) ) ) # DAFUQ? CASTMANIA!
                                                         ctx.move_to( g[0][0], g[0][1] )
+							ctx.set_line_cap(cairo.LINE_CAP_ROUND )
+                                                        ctx.set_line_join( cairo.LINE_JOIN_ROUND )
+                                                        if qwidth == 1:
+							    ctx.set_dash( [ 5./zoomx,10./zoomx ] )
                                                         for p in g[1:]:
                                                                 ctx.line_to( p[0], p[1] )
                                                         ctx.stroke()
+                                                        ctx.set_dash([])	
+
 
                                         #q.put( pygame.image.tostring(rasterimg, 'RGBA') )
 					plan = plpy.prepare("INSERT INTO frontendcache(x,y,zoom,data) VALUES ($1,$2,$3,$4) on conflict do nothing", ["numeric", "numeric", "numeric", "text"])
