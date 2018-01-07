@@ -9,16 +9,14 @@ from random import random
 import sys
 import threading
 import multiprocessing
-import cairo
+#import cairo
 
 
 import rastermap
 import time
-import datetime
-
-import cPickle
-
-import psycopg2
+#import datetime
+#import cPickle
+#import psycopg2
 from sprites import Sprite
 from objectmanager import objectmanager
 from objects import drawableobject
@@ -215,7 +213,7 @@ class environmenter(threading.Thread):
 				#curs.close()
 				#db.pool.putconn( conn )
 				#return;
-			except Exception as e:
+			except:# Exception as e:
 				#print "vvvvv"
 				#print e
 				#print "Environmenter ERROR"

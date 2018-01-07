@@ -2,11 +2,13 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import libs.db
+#import libs.db
 import sys
 import time
 import getpass
 import json
+
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-S', '--setup', action='store_true', default= False, 
@@ -27,7 +29,7 @@ parser.add_argument('-n', '--username', default=getpass.getuser(),
 
 args=parser.parse_args()
 if 'help' in args:
-	usage()
+	#usage()
 	sys.exit(0)
 
 if args.version:
@@ -43,7 +45,7 @@ if args.osmstats:
 print "Launching Game"
 from libs import renderer
 from libs import db
-import pygame
+#import pygame
 
 
 game=renderer.game(args.username)
